@@ -74,7 +74,7 @@ body {
       <i class="fas fa-recycle animate-pulse"></i>
     </div>
     <span class="font-black text-lg text-slate-800 tracking-tighter uppercase italic">
-      Smart <span class="text-emerald-600">Waste</span> System
+      Smart <span class="text-emerald-600"> Waste  Management </span> System
     </span>
   </div>
   <div class="flex items-center gap-6">
