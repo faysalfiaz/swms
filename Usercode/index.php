@@ -342,40 +342,35 @@ function loadComplaints(){
             </div>
             <p class="font-bold text-slate-700 text-sm mb-1">${c.description || 'Waste Issue'}</p>
             <p class="text-[10px] text-slate-500 mb-3"><i class="fas fa-map-marker-alt mr-1 text-emerald-500"></i> ${c.location}</p>
-            
-            ${c.status === 'Rejected' && c.admin_remark ? `
-                <div class="mb-4 p-4 bg-red-500/5 border border-red-500/20 rounded-2xl flex gap-3 items-start">
-                    <i class="fas fa-exclamation-circle text-red-500 mt-1"></i>
-                    <div>
-                        <p class="text-[9px] text-red-600 font-black uppercase tracking-tighter">Admin Review</p>
-                        <p class="text-[11px] text-red-500 italic font-bold">"${c.admin_remark}"</p>
-                    </div>
-                </div>
-            ` : ''}
-
             <img src="uploads/${c.image}" class="w-full h-32 object-cover rounded-2xl mb-2"/>
         `;
 
-        if (c.status === 'Cleaned' && (c.rating == 0 || c.rating == null)) {
-            cardContent += `
-                <div class="mt-4 p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                    <p class="text-[10px] font-black uppercase text-emerald-600 mb-2 tracking-widest text-center">Cleaned! Rate our service</p>
-                    <select id="rate-${c.id}" class="w-full bg-white text-[11px] p-2 rounded-xl mb-2 outline-none border border-emerald-100 font-bold">
-                        <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
-                        <option value="4">⭐⭐⭐⭐ Good</option>
-                        <option value="3">⭐⭐ Average</option>
-                    </select>
-                    <textarea id="msg-${c.id}" placeholder="Any feedback?" class="w-full bg-white text-[11px] p-2 rounded-xl mb-2 h-16 outline-none border border-emerald-100"></textarea>
-                    <button onclick="submitFeedback(${c.id})" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-transform">Submit Review</button>
-                </div>
-            `;
-        } else if (c.rating > 0) {
-            cardContent += `
-                <div class="mt-3 pt-3 border-t border-emerald-50">
-                    <p class="text-[9px] font-black text-emerald-600 uppercase">Your Rating: ${"⭐".repeat(c.rating)}</p>
-                    <p class="text-[10px] text-slate-400 italic mt-1 font-medium">"${c.feedback || ''}"</p>
-                </div>
-            `;
+        // INTEGRATED RATING LOGIC
+        if (c.status === 'Cleaned') {
+            // Check if rating exists in the returned JSON data
+            if (c.rating && c.rating > 0) {
+                cardContent += `
+                    <div class="mt-3 pt-3 border-t border-emerald-50">
+                        <p class="text-[9px] font-black text-emerald-600 uppercase">Your Rating: ${"⭐".repeat(c.rating)}</p>
+                        <p class="text-[10px] text-slate-400 italic mt-1 font-medium">"${c.feedback || ''}"</p>
+                    </div>
+                `;
+            } else {
+                cardContent += `
+                    <div class="mt-4 p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                        <p class="text-[10px] font-black uppercase text-emerald-600 mb-2 tracking-widest text-center">Cleaned! Rate our service</p>
+                        <select id="rate-${c.id}" class="w-full bg-white text-[11px] p-2 rounded-xl mb-2 outline-none border border-emerald-100 font-bold">
+                            <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                            <option value="4">⭐⭐⭐⭐ Good</option>
+                            <option value="3">⭐⭐ Average</option>
+                            <option value="2">⭐⭐ Poor</option>
+                            <option value="1">⭐ Terrible</option>
+                        </select>
+                        <textarea id="msg-${c.id}" placeholder="Any feedback?" class="w-full bg-white text-[11px] p-2 rounded-xl mb-2 h-16 outline-none border border-emerald-100"></textarea>
+                        <button onclick="submitFeedback(${c.id})" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-transform">Submit Review</button>
+                    </div>
+                `;
+            }
         }
 
         div.innerHTML = cardContent;

@@ -1,57 +1,58 @@
 <?php
 include_once 'Database.php';
 
-/**
- * 1. Abstraction: Defining a blueprint using an Interface.
- * Any class implementing this must have these methods.
- */
 interface SystemOperations {
     public function updateStatus($id, $status, $remark);
     public function getAllReports();
 }
 
-/**
- * 2. Inheritance: WasteManager inherits connection from Database class.
- * 3. Polymorphism: It implements the 'SystemOperations' interface.
- */
 class WasteManager extends Database implements SystemOperations {
 
     public function __construct() {
-        // Calling the parent class (Database) constructor
         parent::__construct();
     }
 
-    // 4. Polymorphism (Method Implementation): Providing specific logic for the interface method
     public function updateStatus($id, $status, $remark = "") {
         $safe_id = mysqli_real_escape_string($this->conn, $id);
         $safe_status = mysqli_real_escape_string($this->conn, $status);
         $safe_remark = mysqli_real_escape_string($this->conn, $remark);
 
-        $sql = "UPDATE reports 
-                SET status = '$safe_status', 
-                    admin_remark = '$safe_remark' 
-                WHERE id = '$safe_id'";
-
+        $sql = "UPDATE reports SET status = '$safe_status', admin_remark = '$safe_remark' WHERE id = '$safe_id'";
         return $this->conn->query($sql);
     }
 
-    // Fetch all waste reports from the database
     public function getAllReports() {
         $sql = "SELECT * FROM reports ORDER BY id DESC";
         return $this->conn->query($sql);
     }
 
-    // Save user feedback and rating
-    public function saveFeedback($id, $rating, $feedback) {
-        $safe_id = intval($id);
-        $safe_rating = mysqli_real_escape_string($this->conn, $rating);
+    /**
+     * Logic to save feedback with a duplicate check.
+     */
+    public function saveFeedback($report_id, $rating, $feedback) {
+        $safe_report_id = intval($report_id);
+
+        // Check if already exists
+        $check = $this->conn->query("SELECT id FROM ratings WHERE report_id = $safe_report_id");
+        if ($check && $check->num_rows > 0) return false;
+
+        $safe_rating = intval($rating);
         $safe_feedback = mysqli_real_escape_string($this->conn, $feedback);
         
-        $sql = "UPDATE reports SET rating = '$safe_rating', feedback = '$safe_feedback' WHERE id = $safe_id";
+        $sql = "INSERT INTO ratings (report_id, rating, feedback) VALUES ($safe_report_id, $safe_rating, '$safe_feedback')";
         return $this->conn->query($sql);
     }
 
-    // New: Save Contact Us messages using Prepared Statements for security
+    /**
+     * Helper to fetch rating for the UI
+     */
+    public function getRating($report_id) {
+        $safe_id = intval($report_id);
+        $sql = "SELECT * FROM ratings WHERE report_id = $safe_id";
+        $result = $this->conn->query($sql);
+        return ($result && $result->num_rows > 0) ? $result->fetch_assoc() : null;
+    }
+
     public function saveContact($name, $email, $subject, $message) {
         $sql = "INSERT INTO contacts (name, email, subject, message) VALUES (?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);

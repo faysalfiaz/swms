@@ -236,9 +236,32 @@ $res = $app->getAllReports();
                                     </div>
 
                                 <?php else: ?>
-                                    <div class="flex flex-col items-end opacity-40">
-                                        <span class="text-[9px] font-black uppercase tracking-[0.2em] italic">Archive Ready</span>
-                                        <span class="text-[8px] mt-1 text-emerald-500 font-bold uppercase">Verified Complete</span>
+                                    <div class="flex flex-col items-end">
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-[9px] font-black uppercase tracking-[0.2em] italic opacity-40">Archive Ready</span>
+                                            <span class="text-[8px] mt-1 text-emerald-500 font-bold uppercase opacity-40">Verified Complete</span>
+                                        </div>
+                                        
+                                        <?php 
+                                        $reportId = $row['id'];
+                                        // '@' চিহ্নটি ব্যবহার করা হয়েছে যাতে টেবিল না থাকলেও এরর না দেয়
+                                        $ratingRes = @$db_connection->query("SELECT * FROM ratings WHERE report_id = $reportId");
+                                        if ($ratingRes && $ratingRes->num_rows > 0): 
+                                            $ratingData = $ratingRes->fetch_assoc();
+                                        ?>
+                                            <div class="mt-4 pt-3 border-t border-white/5 flex flex-col items-end">
+                                                <div class="flex gap-1 text-[10px] text-yellow-500">
+                                                    <?php 
+                                                    for ($i = 1; $i <= 5; $i++) {
+                                                        echo ($i <= $ratingData['rating']) ? '<i class="fas fa-star"></i>' : '<i class="far fa-star opacity-20"></i>';
+                                                    }
+                                                    ?>
+                                                </div>
+                                                <p class="text-[9px] mt-1.5 text-slate-400 font-bold uppercase italic bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/5">
+                                                    "<?php echo htmlspecialchars($ratingData['feedback'] ?? ''); ?>"
+                                                </p>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                             </td>
