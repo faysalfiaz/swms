@@ -8,7 +8,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Secure Static Credentials
     if ($email === "admin@swms.com" && $password === "admin123") {
+        // FIXED: Added 'admin_id' to match your dashboard's authentication check
+        $_SESSION['admin_id'] = 1; 
         $_SESSION['admin_verified'] = true;
+        
         header("Location: admin_dashboard.php");
         exit();
     } else { 
@@ -34,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             overflow: hidden;
         }
 
-        /* গ্রাফিক ডিজাইন এলিমেন্ট */
+        /* Graphic Design Elements */
         .bg-glow {
             position: absolute;
             width: 500px;
@@ -56,7 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
         }
 
-        /* অ্যানিমেশন */
+        /* Animations */
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-20px); }

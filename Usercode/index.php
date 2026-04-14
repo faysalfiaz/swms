@@ -1,7 +1,12 @@
+
 <?php
 // PHP block at the very top of index.php
+include_once '../classes/Database.php'; 
 include_once '../classes/WasteManager.php';
-$app = new WasteManager();
+
+$database = new Database();
+$db_connection = $database->getConnection();
+$app = new WasteManager($db_connection); 
 ?>
 <!DOCTYPE html> 
 <html lang="en">
@@ -97,7 +102,7 @@ body {
             🌱 Smart City Initiative
         </div>
         <h1 class="text-6xl font-black text-slate-800 leading-tight">
-            Smart Waste <br><span class="text-emerald-600">Management</span>
+            Smart Waste <br><span class="text-emerald-600">Management System</span>
         </h1>
         <p class="text-slate-600 text-lg">Report urban pollution in real-time. Our system connects your reports directly to collection teams.</p>
     </div>
@@ -182,6 +187,40 @@ body {
   </main>
 </div>
 
+<section id="about-section" class="max-w-6xl mx-auto py-20 px-6">
+    <div class="glass-card rounded-[3rem] p-12 relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-10 opacity-10">
+            <i class="fas fa-leaf text-[150px] text-emerald-600"></i>
+        </div>
+        <div class="relative z-10">
+            <h2 class="text-4xl font-black text-slate-800 uppercase italic mb-6">About Our <span class="text-emerald-600">Initiative</span></h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="space-y-4">
+                    <div class="w-12 h-12 gradient-green rounded-2xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-bullseye text-white"></i>
+                    </div>
+                    <h4 class="font-black text-slate-700 uppercase text-xs tracking-widest">Our Mission</h4>
+                    <p class="text-slate-500 text-sm leading-relaxed">To provide a seamless platform for citizens to report urban waste and ensure a cleaner, greener environment for the community.</p>
+                </div>
+                <div class="space-y-4">
+                    <div class="w-12 h-12 gradient-green rounded-2xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-bolt text-white"></i>
+                    </div>
+                    <h4 class="font-black text-slate-700 uppercase text-xs tracking-widest">Real-time Connection</h4>
+                    <p class="text-slate-500 text-sm leading-relaxed">Your reports are instantly sent to our collection teams, reducing the time between complaint and resolution.</p>
+                </div>
+                <div class="space-y-4">
+                    <div class="w-12 h-12 gradient-green rounded-2xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-star text-white"></i>
+                    </div>
+                    <h4 class="font-black text-slate-700 uppercase text-xs tracking-widest">Public Accountability</h4>
+                    <p class="text-slate-500 text-sm leading-relaxed">Rate our services and provide feedback to help us improve. We believe in transparency and community feedback.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <script>
 function toggleAuth(mode){
   document.getElementById("register-form").classList.toggle("hidden-section", mode==="login");
@@ -199,8 +238,12 @@ function completeRegistration(e){
       headers: {"Content-Type": "application/x-www-form-urlencoded"},
       body: `fullname=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(pass)}`
   }).then(r=>r.text()).then(data => {
-      if(data.trim()==="success") { alert("Success! Please login."); toggleAuth("login"); }
-      else alert(data);
+      if(data.trim()==="success") { 
+          alert("Success! Please login."); 
+          toggleAuth("login"); 
+      } else {
+          alert(data);
+      }
   });
   return false;
 }
@@ -220,7 +263,9 @@ function enterDashboard(e){
           document.getElementById("dashboard-page").classList.remove("hidden-section");
           document.getElementById("logout-btn").classList.remove("hidden-section");
           loadComplaints();
-      } else alert("Invalid Credentials");
+      } else {
+          alert("Invalid Credentials");
+      }
   });
   return false;
 }
@@ -250,7 +295,10 @@ function submitData(){
       loc = document.getElementById("loc-box").value,
       image = document.getElementById("photo-input").files[0];
 
-  if(!loc || !image){ alert("Location and Photo are required."); return; }
+  if(!loc || !image){ 
+      alert("Location and Photo are required."); 
+      return; 
+  }
 
   let fd = new FormData();
   fd.append("description", desc);
@@ -265,7 +313,9 @@ function submitData(){
           document.getElementById("loc-box").value = "";
           clearPhoto();
           loadComplaints();
-      } else alert(data);
+      } else {
+          alert(data);
+      }
   });
 }
 
@@ -281,7 +331,6 @@ function loadComplaints(){
         let div = document.createElement("div");
         div.className = "glass-card p-5 rounded-3xl border-emerald-50 mb-4";
         
-        // Status color logic
         let statusColor = "text-emerald-600 bg-emerald-50";
         if(c.status === 'Rejected') statusColor = "text-red-600 bg-red-50";
         if(c.status === 'Pending') statusColor = "text-yellow-600 bg-yellow-50";
@@ -345,8 +394,12 @@ function submitFeedback(id) {
 
     fetch('submit_feedback.php', { method: 'POST', body: formData })
     .then(res => res.text()).then(data => {
-        if (data.trim() === "success") { alert("Thank you!"); loadComplaints(); }
-        else alert("Error: " + data);
+        if (data.trim() === "success") { 
+            alert("Thank you!"); 
+            loadComplaints(); 
+        } else {
+            alert("Error: " + data);
+        }
     });
 }
 </script>

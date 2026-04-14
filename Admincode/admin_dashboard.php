@@ -8,10 +8,10 @@ session_start();
 // Initialize Objects
 $database = new Database();
 $db_connection = $database->getConnection(); 
-$app = new WasteManager($db_connection); // Primary manager object
+$app = new WasteManager($db_connection);
 
-// 2. AUTHENTICATION CHECK
-if (!isset($_SESSION['admin_verified'])) {
+// 2. AUTHENTICATION CHECK (Verify if logged in)
+if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit();
 }
@@ -29,7 +29,6 @@ if (isset($_GET['id']) || (isset($_GET['action']) && $_GET['action'] == 'reject'
     $action = $_GET['action'] ?? ''; 
     $remark = "Action performed by admin"; 
 
-    // Capture the remark if it's a rejection from the POST form
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_remark'])) {
         $remark = mysqli_real_escape_string($db_connection, $_POST['admin_remark']);
         $action = 'reject'; 
@@ -41,20 +40,24 @@ if (isset($_GET['id']) || (isset($_GET['action']) && $_GET['action'] == 'reject'
     elseif ($action == 'reject') $new_status = 'Rejected';
 
     if ($new_status != "" && $id > 0) {
-        // Ensure your database class has this method updated to accept $remark
-        if ($database->updateReportStatus($id, $new_status, $remark)) {
+        // Calling updateReportStatus through the $app object (WasteManager)
+        if ($app->updateReportStatus($id, $new_status, $remark)) {
             header("Location: admin_dashboard.php?success=1");
             exit();
         }
     }
 }
 
-// 5. ANALYTICS QUERIES
+// 5. ANALYTICS QUERIES (Fixed Undefined Variable Logic)
 $total_res = $db_connection->query("SELECT COUNT(*) as t FROM reports");
 $total_all = ($total_res) ? $total_res->fetch_assoc()['t'] : 0;
 
-$pending = $db_connection->query("SELECT COUNT(*) as t FROM reports WHERE status='Pending'")->fetch_assoc()['t'] ?: 0;
-$cleaned = $db_connection->query("SELECT COUNT(*) as t FROM reports WHERE status='Cleaned'")->fetch_assoc()['t'] ?: 0;
+$pending_res = $db_connection->query("SELECT COUNT(*) as t FROM reports WHERE status='Pending'");
+$pending = ($pending_res) ? $pending_res->fetch_assoc()['t'] : 0;
+
+$cleaned_res = $db_connection->query("SELECT COUNT(*) as t FROM reports WHERE status='Cleaned'");
+$cleaned = ($cleaned_res) ? $cleaned_res->fetch_assoc()['t'] : 0;
+
 $solve_rate = ($total_all > 0) ? round(($cleaned / $total_all) * 100) : 0;
 
 $active_admins = 1; 
