@@ -1,6 +1,6 @@
 <?php
 // PHP block at the very top of index.php
-include_once 'classes/WasteManager.php';
+include_once '../classes/WasteManager.php';
 $app = new WasteManager();
 ?>
 <!DOCTYPE html> 
