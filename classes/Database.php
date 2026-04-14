@@ -16,8 +16,29 @@ class Database {
         }
     }
 
+    /**
+     * Returns the database connection object
+     */
     public function getConnection() {
         return $this->conn;
+    }
+
+    /**
+     * Method to update report status and admin remarks
+     */
+    public function updateReportStatus($id, $status, $remark) {
+        // Using Prepared Statements to prevent SQL Injection
+        $sql = "UPDATE reports SET status = ?, admin_remark = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        
+        if ($stmt) {
+            // "ssi" stands for string, string, integer
+            $stmt->bind_param("ssi", $status, $remark, $id);
+            if ($stmt->execute()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 ?>

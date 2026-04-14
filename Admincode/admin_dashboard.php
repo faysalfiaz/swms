@@ -1,55 +1,55 @@
+<?php
+// 1. INITIALIZE SYSTEM & SESSION
+include_once '../classes/Database.php';
+include_once '../classes/WasteManager.php';
 
-<?php 
 session_start();
 
-// 1. AUTHENTICATION & LOGOUT
-if (isset($_GET['logout'])) { 
-    session_destroy(); 
-    header("Location: login.php"); 
-    exit(); 
-}
+// Initialize Objects
+$database = new Database();
+$db_connection = $database->getConnection(); 
+$app = new WasteManager($db_connection); // Primary manager object
 
+// 2. AUTHENTICATION CHECK
 if (!isset($_SESSION['admin_verified'])) {
     header("Location: login.php");
     exit();
 }
 
-// 2. INITIALIZE CLASSES
-include '../classes/Database.php';
-include '../classes/WasteManager.php';
+// 3. LOGOUT HANDLER
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
 
-$database = new Database();
-$db_connection = $database->getConnection(); 
-$manager = new WasteManager($db_connection);
+// 4. ACTION HANDLER (Assign, Clean, Reject)
+if (isset($_GET['id']) || (isset($_GET['action']) && $_GET['action'] == 'reject')) {
+    $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+    $action = $_GET['action'] ?? ''; 
+    $remark = "Action performed by admin"; 
 
-// 3. ACTION HANDLER (Updated with Reject Logic)
-if (isset($_GET['action']) && isset($_GET['id'])) {
-    $id = intval($_GET['id']);
-    $action = $_GET['action'];
-    
-    // Capture the remark if it's a rejection, otherwise set default
-    $remark = isset($_POST['admin_remark']) ? $_POST['admin_remark'] : "Action performed by admin";
-
-    if ($action == 'assign') {
-        $new_status = 'Assigned';
-    } elseif ($action == 'clean') {
-        $new_status = 'Cleaned';
-    } elseif ($action == 'reject') {
-        $new_status = 'Rejected';
-    } else {
-        $new_status = "";
+    // Capture the remark if it's a rejection from the POST form
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_remark'])) {
+        $remark = mysqli_real_escape_string($db_connection, $_POST['admin_remark']);
+        $action = 'reject'; 
     }
 
-    if ($new_status != "") {
-        // Use the new updateReportStatus method from Database.php
+    $new_status = "";
+    if ($action == 'assign') $new_status = 'Assigned';
+    elseif ($action == 'clean') $new_status = 'Cleaned';
+    elseif ($action == 'reject') $new_status = 'Rejected';
+
+    if ($new_status != "" && $id > 0) {
+        // Ensure your database class has this method updated to accept $remark
         if ($database->updateReportStatus($id, $new_status, $remark)) {
-            header("Location: admin_dashboard.php");
+            header("Location: admin_dashboard.php?success=1");
             exit();
         }
     }
 }
 
-// 4. ANALYTICS QUERIES
+// 5. ANALYTICS QUERIES
 $total_res = $db_connection->query("SELECT COUNT(*) as t FROM reports");
 $total_all = ($total_res) ? $total_res->fetch_assoc()['t'] : 0;
 
@@ -59,7 +59,8 @@ $solve_rate = ($total_all > 0) ? round(($cleaned / $total_all) * 100) : 0;
 
 $active_admins = 1; 
 
-$res = $manager->getAllReports();
+// Fetch all reports for the table
+$res = $app->getAllReports();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -184,18 +185,6 @@ $res = $manager->getAllReports();
                             <td>
                                 <p class="font-black text-base uppercase italic tracking-tighter"><?php echo $row['location']; ?></p>
                                 <p class="text-[10px] text-slate-500 mt-1 font-medium leading-relaxed max-w-xs uppercase opacity-60"><?php echo $row['description']; ?></p>
-                                
-                                <div class="mt-4 flex flex-col gap-1">
-                                    <?php if (!empty($row['rating'])): ?>
-                                        <div class="flex items-center gap-1">
-                                            <?php for ($i = 1; $i <= 5; $i++): 
-                                                $starColor = ($i <= $row['rating']) ? 'text-yellow-400' : 'text-slate-600'; ?>
-                                                <i class="fas fa-star text-[9px] <?php echo $starColor; ?>"></i>
-                                            <?php endfor; ?>
-                                            <span class="ml-2 text-[8px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded uppercase tracking-tighter">Report Rated</span>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
                             </td>
                             <td>
                                 <div class="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/5">
@@ -204,6 +193,7 @@ $res = $manager->getAllReports();
                                         $textColor = 'text-yellow-500';
                                         if($row['status'] == 'Cleaned') { $dotColor = 'bg-emerald-500'; $textColor = 'text-emerald-500'; }
                                         if($row['status'] == 'Rejected') { $dotColor = 'bg-red-500'; $textColor = 'text-red-500'; }
+                                        if($row['status'] == 'Assigned') { $dotColor = 'bg-blue-500'; $textColor = 'text-blue-500'; }
                                     ?>
                                     <span class="h-1.5 w-1.5 rounded-full <?php echo $dotColor; ?>"></span>
                                     <span class="text-[9px] font-black uppercase tracking-widest <?php echo $textColor; ?>">
@@ -213,31 +203,33 @@ $res = $manager->getAllReports();
                             </td>
                             <td class="p-8 text-right">
                                 <?php if($row['status'] == 'Pending'): ?>
-                                    <form action="?action=reject&id=<?php echo $row['id']; ?>" method="POST" class="flex flex-col items-end gap-2">
-                                        <textarea name="admin_remark" placeholder="Reason for rejection..." 
-                                                  class="bg-white/5 border border-white/10 rounded-lg p-2 text-[9px] text-white w-48 focus:border-red-500/50 outline-none transition-all placeholder:text-slate-600"></textarea>
+                                    <form action="admin_dashboard.php?action=reject&id=<?php echo $row['id']; ?>" method="POST" class="flex flex-col items-end gap-2">
+                                        <textarea name="admin_remark" required placeholder="Reason for rejection..." 
+                                                  class="bg-white/5 border border-white/10 rounded-lg p-2 text-[10px] text-white w-52 outline-none focus:border-red-500/50 placeholder:text-slate-600 transition-all"></textarea>
                                         
                                         <div class="flex gap-2">
                                             <button type="submit" class="bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-tighter hover:bg-red-500 hover:text-white transition-all">
                                                 Reject Report
                                             </button>
                                             <a href="?action=assign&id=<?php echo $row['id']; ?>" 
-                                               class="bg-white text-black px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-tighter hover:bg-emerald-500 hover:text-white transition-all shadow-xl shadow-white/5">
-                                               Initiate Assignment
+                                               class="bg-white text-black px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-tighter hover:bg-emerald-500 hover:text-white transition-all">
+                                                Initiate Assignment
                                             </a>
                                         </div>
                                     </form>
 
                                 <?php elseif($row['status'] == 'Assigned'): ?>
                                     <a href="?action=clean&id=<?php echo $row['id']; ?>" 
-                                       class="inline-block bg-emerald-600 text-white px-8 py-3 rounded-xl text-[9px] font-black uppercase tracking-tighter hover:bg-emerald-400 transition-all shadow-xl shadow-emerald-500/20">
-                                       Finalize Cleanup
+                                       class="inline-block bg-emerald-600 text-white px-8 py-3 rounded-xl text-[9px] font-black uppercase tracking-tighter hover:bg-emerald-400 transition-all">
+                                        Finalize Cleanup
                                     </a>
 
                                 <?php elseif($row['status'] == 'Rejected'): ?>
-                                    <div class="flex flex-col items-end opacity-60">
+                                    <div class="flex flex-col items-end">
                                         <span class="text-[9px] font-black uppercase tracking-[0.2em] text-red-500 italic">Report Rejected</span>
-                                        <p class="text-[8px] mt-1 text-slate-500 font-bold uppercase italic">"<?php echo $row['admin_remark']; ?>"</p>
+                                        <p class="text-[10px] mt-1 text-slate-400 font-bold uppercase italic bg-white/5 px-3 py-1 rounded-lg border border-white/5">
+                                            "<?php echo htmlspecialchars($row['admin_remark'] ?? 'No reason given'); ?>"
+                                        </p>
                                     </div>
 
                                 <?php else: ?>
@@ -257,8 +249,8 @@ $res = $manager->getAllReports();
 
     <div id="imgViewer" class="modal items-center justify-center p-8 lg:p-20" onclick="this.style.display='none'">
         <div class="relative w-full h-full flex items-center justify-center">
-            <img id="fullImg" class="max-h-full max-w-full rounded-[3rem] border border-white/20 shadow-[0_0_80px_rgba(0,0,0,0.5)]">
-            <div class="absolute top-0 right-0 p-10"><i class="fas fa-times text-white/20 text-3xl hover:text-white transition-colors cursor-pointer"></i></div>
+            <img id="fullImg" class="max-h-full max-w-full rounded-[3rem] border border-white/20 shadow-2xl">
+            <div class="absolute top-0 right-0 p-10"><i class="fas fa-times text-white/20 text-3xl hover:text-white cursor-pointer"></i></div>
         </div>
     </div>
 
