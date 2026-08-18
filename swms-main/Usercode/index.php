@@ -1,4 +1,9 @@
 <?php
+session_start();
+
+// Check if user is already logged in to store in JS variable
+$is_logged_in = isset($_SESSION['user_id']) ? 'true' : 'false';
+
 include_once '../classes/Database.php'; 
 include_once '../classes/WasteManager.php';
 
@@ -236,6 +241,23 @@ body {
 </section>
 
 <script>
+// Check if user is logged in from PHP session
+const isLoggedIn = <?php echo $is_logged_in; ?>;
+
+// Auto-display dashboard if user is already logged in upon page load
+window.addEventListener("DOMContentLoaded", () => {
+  if (isLoggedIn) {
+    showDashboardView();
+  }
+});
+
+function showDashboardView() {
+  document.getElementById("auth-page").classList.add("hidden-section");
+  document.getElementById("dashboard-page").classList.remove("hidden-section");
+  document.getElementById("logout-btn").classList.remove("hidden-section");
+  loadComplaints();
+}
+
 function toggleAuth(mode){
   document.getElementById("register-form").classList.toggle("hidden-section", mode==="login");
   document.getElementById("login-form").classList.toggle("hidden-section", mode!=="login");
@@ -273,10 +295,7 @@ function enterDashboard(e){
       body: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(pass)}`
   }).then(r=>r.text()).then(data => {
       if(data.trim()==="success"){
-          document.getElementById("auth-page").classList.add("hidden-section");
-          document.getElementById("dashboard-page").classList.remove("hidden-section");
-          document.getElementById("logout-btn").classList.remove("hidden-section");
-          loadComplaints();
+          showDashboardView();
       } else {
           alert("Invalid Credentials");
       }
@@ -284,7 +303,13 @@ function enterDashboard(e){
   return false;
 }
 
-function logoutUser(){ location.reload(); }
+function logoutUser(){
+  fetch("logout.php").then(() => {
+    location.reload();
+  }).catch(() => {
+    location.reload();
+  });
+}
 
 function handlePreview(event){
   const file = event.target.files[0];
